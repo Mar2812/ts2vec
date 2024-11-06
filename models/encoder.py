@@ -41,6 +41,7 @@ class TSEncoder(nn.Module):
     def forward(self, x, mask=None):  # x: B x T x input_dims
         nan_mask = ~x.isnan().any(axis=-1)
         x[~nan_mask] = 0
+        # 经过一层线性层升维/降维
         x = self.input_fc(x)  # B x T x Ch
         
         # generate & apply mask

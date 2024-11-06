@@ -145,6 +145,7 @@ class TS2Vec:
                 if self.after_iter_callback is not None:
                     self.after_iter_callback(self, loss.item())
             
+            # 这里用于退出while循环
             if interrupted:
                 break
             

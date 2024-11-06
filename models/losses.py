@@ -4,7 +4,8 @@ import torch.nn.functional as F
 
 def hierarchical_contrastive_loss(z1, z2, alpha=0.5, temporal_unit=0):
     loss = torch.tensor(0., device=z1.device)
-    d = 0
+    d = 0   # 层数计数器
+    # 迭代计算不同层次对比损失
     while z1.size(1) > 1:
         if alpha != 0:
             loss += alpha * instance_contrastive_loss(z1, z2)
@@ -12,6 +13,7 @@ def hierarchical_contrastive_loss(z1, z2, alpha=0.5, temporal_unit=0):
             if 1 - alpha != 0:
                 loss += (1 - alpha) * temporal_contrastive_loss(z1, z2)
         d += 1
+        # 时间池化，维度减半
         z1 = F.max_pool1d(z1.transpose(1, 2), kernel_size=2).transpose(1, 2)
         z2 = F.max_pool1d(z2.transpose(1, 2), kernel_size=2).transpose(1, 2)
     if z1.size(1) == 1:
@@ -20,6 +22,7 @@ def hierarchical_contrastive_loss(z1, z2, alpha=0.5, temporal_unit=0):
         d += 1
     return loss / d
 
+# 实例对比损失
 def instance_contrastive_loss(z1, z2):
     B, T = z1.size(0), z1.size(1)
     if B == 1:
@@ -32,9 +35,12 @@ def instance_contrastive_loss(z1, z2):
     logits = -F.log_softmax(logits, dim=-1)
     
     i = torch.arange(B, device=z1.device)
+    # 通过错位对其计算损失
     loss = (logits[:, i, B + i - 1].mean() + logits[:, B + i, i].mean()) / 2
     return loss
 
+# 时间对比损失
+# 这里并没有区分时间中重叠的部分
 def temporal_contrastive_loss(z1, z2):
     B, T = z1.size(0), z1.size(1)
     if T == 1:
