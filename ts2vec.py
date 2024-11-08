@@ -6,10 +6,11 @@ from models import TSEncoder
 from models.losses import hierarchical_contrastive_loss
 from utils import take_per_row, split_with_nan, centerize_vary_length_series, torch_pad_nan
 import math
+import logging  # 添加日志库
 
 class TS2Vec:
     '''The TS2Vec model'''
-    
+
     def __init__(
         self,
         input_dims,
@@ -56,6 +57,10 @@ class TS2Vec:
         
         self.n_epochs = 0
         self.n_iters = 0
+        
+        # 设置logger
+        self.logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.INFO)  # 设置日志等级为INFO
     
     def fit(self, train_data, n_epochs=None, n_iters=None, verbose=False):
         ''' Training the TS2Vec model.
@@ -152,7 +157,7 @@ class TS2Vec:
             cum_loss /= n_epoch_iters
             loss_log.append(cum_loss)
             if verbose:
-                print(f"Epoch #{self.n_epochs}: loss={cum_loss}")
+                self.logger.info(f"Epoch #{self.n_epochs}: loss={cum_loss}")  # 使用logger替代print
             self.n_epochs += 1
             
             if self.after_epoch_callback is not None:
@@ -317,4 +322,3 @@ class TS2Vec:
         '''
         state_dict = torch.load(fn, map_location=self.device)
         self.net.load_state_dict(state_dict)
-    
