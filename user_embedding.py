@@ -1,3 +1,4 @@
+import logging
 from ts2vec import TS2Vec
 import datautils
 import torch
@@ -7,10 +8,16 @@ import numpy as np
 import os
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import re
-import numpy as np
-from tasks.classification import eval_classification
 from sklearn.utils import resample
 
+# 设置 logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 def preprocess_data(df, continue_col, categorical_col):
     # 提取时间戳的最大值，用于后续的3D张量转换
@@ -25,7 +32,8 @@ def preprocess_data(df, continue_col, categorical_col):
     scaler = StandardScaler()
     df[continuous_cols] = df[continuous_cols].astype(float)
     df[continuous_cols] = scaler.fit_transform(df[continuous_cols].fillna(0))
-    print("ok")
+    logger.info("连续特征已标准化")
+    
     # 处理离散特征 - One-Hot 编码
     encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     categorical_data = encoder.fit_transform(df[categorical_cols].fillna('unknown'))
@@ -89,8 +97,7 @@ def load_data(dataset=None):
     # 分割数据集
     data_train = data[data['dataset'] == 'trainSet']
     data_train = balanced(data_train)
-    print("训练样本分布")
-    print(data_train['target'].value_counts())
+    logger.info(f"训练样本分布: {data_train['target'].value_counts()}")
     labels_train = data_train["target"].values
     data_test = data[data['dataset'] == 'valSet']
     labels_test = data_test["target"].values
@@ -126,14 +133,14 @@ def load_data(dataset=None):
         categorical_col=[]
     )
     diaoyong_features_oot = preprocess_data(
-        data_oot[invocation_columns + ["diaoyong_datediff_nextdate_1"]],
+        data_oot[invocation_columns + ["diaoyong_datediff_nextdate_1"]], 
         continue_col=["datediff_loandate", "member_times", "datediff_member", "datediff_nextdate"],
         categorical_col=[]
     )
 
     # daikou 特征预处理
     daikou_features_train = preprocess_data(
-        data_train[deduction_columns + ["daikou_datediff_nextdate_1"]],
+        data_train[deduction_columns + ["daikou_datediff_nextdate_1"]], 
         continue_col=["order_money", "datediff_loandate", "member_times", "flag_times", "memberflag_times", "datediff_member", "datediff_flag", "datediff_memberflag", "datediff_nextdate"],
         categorical_col=["succ_flag", "member_name"]
     )
@@ -150,7 +157,7 @@ def load_data(dataset=None):
 
     # daifu 特征预处理
     daifu_features_train = preprocess_data(
-        data_train[payment_columns + ["daifu_datediff_nextdate_1"]],
+        data_train[payment_columns + ["daifu_datediff_nextdate_1"]], 
         continue_col=["transfer_money", "datediff_loandate", "member_times", "datediff_member", "datediff_nextdate"],
         categorical_col=["member_name"]
     )
@@ -184,8 +191,8 @@ data_path = r"/home/mc/ts2vec/ts2vec/datasets/wfplus_application_1718475236931_7
     diaoyong_features_oot, daikou_features_oot, daifu_features_oot, labels_oot
 ) = load_data(data_path)
 time_end = time.time()
-print("data_load time:", time_end - time_begin)
-print(diaoyong_features_train.shape)
+logger.info(f"数据加载时间: {time_end - time_begin}秒")
+logger.info(f"训练数据形状: {diaoyong_features_train.shape}")
 
 # 使用TS2Vec模型对daikou, daifu, diaoyong特征分别进行编码
 def encode_features(model, train_features, test_features, encoding_window='full_series'):
@@ -225,6 +232,6 @@ y_score, eval_metrics = eval_classification(
 )
 
 # 打印评估结果
-print("Evaluation Metrics:", eval_metrics)
-print("Accuracy:", eval_metrics['acc'])
-print("AUPRC:", eval_metrics['auprc'])
+logger.info(f"评估指标: {eval_metrics}")
+logger.info(f"准确率: {eval_metrics['acc']}")
+logger.info(f"AUPRC: {eval_metrics['auprc']}")
