@@ -233,5 +233,7 @@ y_score, eval_metrics = eval_classification(
 
 # 打印评估结果
 logger.info(f"评估指标: {eval_metrics}")
-logger.info(f"准确率: {eval_metrics['acc']}")
+logger.info(f"准确率 (Accuracy): {eval_metrics['acc']}")
 logger.info(f"AUPRC: {eval_metrics['auprc']}")
+logger.info(f"AUC: {eval_metrics['auc']}")
+logger.info(f"KS: {eval_metrics['ks']}")

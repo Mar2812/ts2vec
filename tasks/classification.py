@@ -2,6 +2,18 @@ import numpy as np
 from . import _eval_protocols as eval_protocols
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import average_precision_score
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+
+
+def get_ks(y_true,y_pred):
+    fpr,tpr,thresholds=roc_curve(y_true,y_pred)
+    ks=max(tpr-fpr)
+    return ks
+
+def get_auc(y_true,y_pred):
+    auc=roc_auc_score(y_true,y_pred)
+    return auc
 
 def eval_classification(train_repr, train_labels, test_repr, test_labels, eval_protocol='linear'):
     assert train_labels.ndim == 1 or train_labels.ndim == 2
@@ -43,4 +55,10 @@ def eval_classification(train_repr, train_labels, test_repr, test_labels, eval_p
     test_labels_onehot = np.eye(int(num_classes))[test_labels.astype(int)]
     auprc = average_precision_score(test_labels_onehot, y_score)
     
-    return y_score, { 'acc': acc, 'auprc': auprc }
+    # 计算AUC（曲线下面积）
+    auc = get_auc(test_labels, y_score[:, 1])  # 取类别1的概率值来计算AUC
+
+    # 计算KS（Kolmogorov-Smirnov统计量）
+    ks = get_ks(test_labels, y_score[:, 1])  # 取类别1的概率值来计算KS
+
+    return y_score, {'acc': acc, 'auprc': auprc, 'auc': auc, 'ks': ks}
