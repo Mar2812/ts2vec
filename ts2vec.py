@@ -7,6 +7,8 @@ from models.losses import hierarchical_contrastive_loss
 from utils import take_per_row, split_with_nan, centerize_vary_length_series, torch_pad_nan
 import math
 import logging  # 添加日志库
+import os
+from datetime import datetime
 
 class TS2Vec:
     '''The TS2Vec model'''
@@ -62,6 +64,8 @@ class TS2Vec:
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)  # 设置日志等级为INFO
     
+
+
     def fit(self, train_data, n_epochs=None, n_iters=None, verbose=False):
         ''' Training the TS2Vec model.
         
@@ -75,6 +79,13 @@ class TS2Vec:
             loss_log: a list containing the training losses on each epoch.
         '''
         assert train_data.ndim == 3
+        
+        # 确保结果文件夹存在
+        os.makedirs("results/loss", exist_ok=True)
+        
+        # 创建文件名，包含当前时间戳
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        loss_file_path = f"results/loss/{timestamp}_loss_result.txt"
         
         if n_iters is None and n_epochs is None:
             n_iters = 200 if train_data.size <= 100000 else 600  # default param for n_iters
@@ -97,74 +108,78 @@ class TS2Vec:
         
         loss_log = []
         
-        while True:
-            if n_epochs is not None and self.n_epochs >= n_epochs:
-                break
-            
-            cum_loss = 0
-            n_epoch_iters = 0
-            
-            interrupted = False
-            for batch in train_loader:
-                if n_iters is not None and self.n_iters >= n_iters:
-                    interrupted = True
+        with open(loss_file_path, "w") as f:  # 打开文件进行写操作
+            while True:
+                if n_epochs is not None and self.n_epochs >= n_epochs:
                     break
                 
-                x = batch[0]
-                if self.max_train_length is not None and x.size(1) > self.max_train_length:
-                    window_offset = np.random.randint(x.size(1) - self.max_train_length + 1)
-                    x = x[:, window_offset : window_offset + self.max_train_length]
-                x = x.to(self.device)
+                cum_loss = 0
+                n_epoch_iters = 0
                 
-                ts_l = x.size(1)
-                crop_l = np.random.randint(low=2 ** (self.temporal_unit + 1), high=ts_l+1)
-                crop_left = np.random.randint(ts_l - crop_l + 1)
-                crop_right = crop_left + crop_l
-                crop_eleft = np.random.randint(crop_left + 1)
-                crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
-                crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
-                
-                optimizer.zero_grad()
-                
-                out1 = self._net(take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft))
-                out1 = out1[:, -crop_l:]
-                
-                out2 = self._net(take_per_row(x, crop_offset + crop_left, crop_eright - crop_left))
-                out2 = out2[:, :crop_l]
-                
-                loss = hierarchical_contrastive_loss(
-                    out1,
-                    out2,
-                    temporal_unit=self.temporal_unit
-                )
-                
-                loss.backward()
-                optimizer.step()
-                self.net.update_parameters(self._net)
+                interrupted = False
+                for batch in train_loader:
+                    if n_iters is not None and self.n_iters >= n_iters:
+                        interrupted = True
+                        break
                     
-                cum_loss += loss.item()
-                n_epoch_iters += 1
+                    x = batch[0]
+                    if self.max_train_length is not None and x.size(1) > self.max_train_length:
+                        window_offset = np.random.randint(x.size(1) - self.max_train_length + 1)
+                        x = x[:, window_offset : window_offset + self.max_train_length]
+                    x = x.to(self.device)
+                    
+                    ts_l = x.size(1)
+                    crop_l = np.random.randint(low=2 ** (self.temporal_unit + 1), high=ts_l+1)
+                    crop_left = np.random.randint(ts_l - crop_l + 1)
+                    crop_right = crop_left + crop_l
+                    crop_eleft = np.random.randint(crop_left + 1)
+                    crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
+                    crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
+                    
+                    optimizer.zero_grad()
+                    
+                    out1 = self._net(take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft))
+                    out1 = out1[:, -crop_l:]
+                    
+                    out2 = self._net(take_per_row(x, crop_offset + crop_left, crop_eright - crop_left))
+                    out2 = out2[:, :crop_l]
+                    
+                    loss = hierarchical_contrastive_loss(
+                        out1,
+                        out2,
+                        temporal_unit=self.temporal_unit
+                    )
+                    
+                    loss.backward()
+                    optimizer.step()
+                    self.net.update_parameters(self._net)
+                        
+                    cum_loss += loss.item()
+                    n_epoch_iters += 1
+                    
+                    self.n_iters += 1
+                    
+                    if self.after_iter_callback is not None:
+                        self.after_iter_callback(self, loss.item())
                 
-                self.n_iters += 1
+                if interrupted:
+                    break
                 
-                if self.after_iter_callback is not None:
-                    self.after_iter_callback(self, loss.item())
-            
-            # 这里用于退出while循环
-            if interrupted:
-                break
-            
-            cum_loss /= n_epoch_iters
-            loss_log.append(cum_loss)
-            if verbose:
-                self.logger.info(f"Epoch #{self.n_epochs}: loss={cum_loss}")  # 使用logger替代print
-            self.n_epochs += 1
-            
-            if self.after_epoch_callback is not None:
-                self.after_epoch_callback(self, cum_loss)
-            
+                cum_loss /= n_epoch_iters
+                loss_log.append(cum_loss)
+                
+                # 写入当前epoch的损失到文件中
+                f.write(f"Epoch #{self.n_epochs}: loss={cum_loss}\n")
+                
+                if verbose:
+                    self.logger.info(f"Epoch #{self.n_epochs}: loss={cum_loss}")  # 使用logger替代print
+                self.n_epochs += 1
+                
+                if self.after_epoch_callback is not None:
+                    self.after_epoch_callback(self, cum_loss)
+                
         return loss_log
-    
+
     def _eval_with_pooling(self, x, mask=None, slicing=None, encoding_window=None):
         out = self.net(x.to(self.device, non_blocking=True), mask)
         if encoding_window == 'full_series':

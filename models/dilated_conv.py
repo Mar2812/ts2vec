@@ -38,6 +38,11 @@ class ConvBlock(nn.Module):
         return x + residual
 
 class DilatedConvEncoder(nn.Module):
+    """
+    depth=50 时出现报错的根本原因在于 depth 增加会导致卷积网络的膨胀系数（dilation）指数级增长
+    最终使得 padding 参数的计算变得异常
+    从而引发了 padding should be greater than zero but got (0, 2147483648) 的错误
+    """
     def __init__(self, in_channels, channels, kernel_size):
         super().__init__()
         self.net = nn.Sequential(*[

@@ -1,7 +1,7 @@
 import logging
 from ts2vec import TS2Vec
 import datautils
-import torch
+# import torch
 from tasks.classification import eval_classification
 import pandas as pd
 import numpy as np
@@ -9,15 +9,30 @@ import os
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import re
 from sklearn.utils import resample
+import time
+from datetime import datetime
 
 # 设置 logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)  # 设为DEBUG级别，以捕获详细信息
+
+# 配置 StreamHandler 用于终端输出
 ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+
+# 确保目录存在
+log_dir = "results/terminal_info"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+log_filename = os.path.join(log_dir, datetime.now().strftime("%Y%m%d_%H%M%S") + "_loginfo.txt")
+fh = logging.FileHandler(log_filename)
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 def preprocess_data(df, continue_col, categorical_col):
     # 提取时间戳的最大值，用于后续的3D张量转换
@@ -67,6 +82,8 @@ def preprocess_data(df, continue_col, categorical_col):
         for f_idx, col in enumerate(cols):
             result_array[:, t_idx, f_idx] = df_processed[col].values
     
+    logger.info(f"预处理后的 result_array 形状: {result_array.shape}")
+
     return np.nan_to_num(result_array, nan=0.0)
 
 def load_data(dataset=None):
@@ -87,8 +104,8 @@ def load_data(dataset=None):
         # 从多数类样本中随机选择少数类样本数量的x倍
         data_majority_oversampled = resample(data_majority, 
                                             replace=False,    # 不放回采样
-                                            n_samples=len(data_minority) * x,  # 使多数类样本数为少数类样本的x倍
-                                            random_state=42)  # 保证结果可复现
+                                            n_samples=len(data_minority) * x,
+                                            random_state=42)
 
         # 合并平衡后的数据集
         data_balanced = pd.concat([data_majority_oversampled, data_minority])
@@ -179,9 +196,6 @@ def load_data(dataset=None):
         diaoyong_features_oot, daikou_features_oot, daifu_features_oot, labels_oot
     )
 
-# 使用示例
-import time
-
 time_begin = time.time()
 data_path = r"/home/mc/ts2vec/ts2vec/datasets/wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
 # data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
@@ -195,45 +209,96 @@ logger.info(f"数据加载时间: {time_end - time_begin}秒")
 logger.info(f"训练数据形状: {diaoyong_features_train.shape}")
 
 # 使用TS2Vec模型对daikou, daifu, diaoyong特征分别进行编码
-def encode_features(model, train_features, test_features, encoding_window='full_series'):
+def encode_features(model, train_features, test_features, oot_features, encoding_window='full_series'):
     train_repr = model.encode(train_features, encoding_window=encoding_window)
     test_repr = model.encode(test_features, encoding_window=encoding_window)
-    return train_repr, test_repr
+    oot_repr = model.encode(oot_features, encoding_window=encoding_window)
+    return train_repr, test_repr, oot_repr
 
-# 创建TS2Vec模型并对每个特征集进行编码
+# 获取当前时间，用于生成结果文件名
+result_filename = datetime.now().strftime("%Y%m%d_%H%M%S") + "_metric.txt"
+result_filename = f"results/metric/{result_filename}"
+directory = os.path.dirname(result_filename)
+# 如果目录不存在，则创建目录
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+def save_results_to_file(content, filename):
+    """将内容写入指定文件"""
+    with open(filename, "a") as file:
+        file.write(content + "\n")
+
+# 使用TS2Vec模型对daikou, daifu, diaoyong特征分别进行编码并进行独立测试
+def encode_and_evaluate(model, train_features, test_features, oot_features, labels_train, labels_test, labels_oot, feature_name):
+    # 对训练集、测试集和OOT集进行编码
+    train_repr, test_repr, oot_repr = encode_features(model, train_features, test_features, oot_features)
+
+    # 在训练集上评估
+    y_score_train, eval_metrics_train = eval_classification(
+        train_repr, labels_train,
+        train_repr, labels_train,
+        eval_protocol='linear'
+    )
+
+    # 在测试集上评估
+    y_score_test, eval_metrics_test = eval_classification(
+        train_repr, labels_train,
+        test_repr, labels_test,
+        eval_protocol='linear'
+    )
+    
+    # 在OOT集上评估
+    y_score_oot, eval_metrics_oot = eval_classification(
+        train_repr, labels_train,
+        oot_repr, labels_oot,
+        eval_protocol='linear'
+    )
+
+    # 组织评估结果的文本
+    result_text = f"【{feature_name}】特征 - 训练集评估指标: {eval_metrics_train}\n" \
+                  f"训练集准确率 (Accuracy): {eval_metrics_train['acc']}\n" \
+                  f"训练集AUPRC: {eval_metrics_train['auprc']}\n" \
+                  f"训练集AUC: {eval_metrics_train['auc']}\n" \
+                  f"训练集KS: {eval_metrics_train['ks']}\n" \
+                  f"【{feature_name}】特征 - 测试集评估指标: {eval_metrics_test}\n" \
+                  f"测试集准确率 (Accuracy): {eval_metrics_test['acc']}\n" \
+                  f"测试集AUPRC: {eval_metrics_test['auprc']}\n" \
+                  f"测试集AUC: {eval_metrics_test['auc']}\n" \
+                  f"测试集KS: {eval_metrics_test['ks']}\n" \
+                  f"【{feature_name}】特征 - OOT集评估指标: {eval_metrics_oot}\n" \
+                  f"OOT集准确率 (Accuracy): {eval_metrics_oot['acc']}\n" \
+                  f"OOT集AUPRC: {eval_metrics_oot['auprc']}\n" \
+                  f"OOT集AUC: {eval_metrics_oot['auc']}\n" \
+                  f"OOT集KS: {eval_metrics_oot['ks']}\n"
+
+    # 打印并保存结果
+    logger.info(result_text)
+    save_results_to_file(result_text, result_filename)
+
+# 设置TS2Vec模型的公共参数
 device = 0
-# device = torch.device('cpu')
 output_dims = 320
+batch_size = 256
+lr = 0.01
+depth = 5
+epochs = 100
 
-# daikou特征编码
-model_daikou = TS2Vec(input_dims=daikou_features_train.shape[-1], device=device, output_dims=output_dims)
-model_daikou.fit(daikou_features_train, verbose=True)
-train_repr_daikou, test_repr_daikou = encode_features(model_daikou, daikou_features_train, daikou_features_test)
+# 各特征集的独立编码和评估
 
-# daifu特征编码
-model_daifu = TS2Vec(input_dims=daifu_features_train.shape[-1], device=device, output_dims=output_dims)
-model_daifu.fit(daifu_features_train, verbose=True)
-train_repr_daifu, test_repr_daifu = encode_features(model_daifu, daifu_features_train, daifu_features_test)
+try:
+    # daikou特征编码和评估
+    model_daikou = TS2Vec(lr=lr, depth=depth, input_dims=daikou_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
+    model_daikou.fit(daikou_features_train, verbose=True, n_epochs=epochs)
+    encode_and_evaluate(model_daikou, daikou_features_train, daikou_features_test, daikou_features_oot, labels_train, labels_test, labels_oot, "daikou")
 
-# diaoyong特征编码
-model_diaoyong = TS2Vec(input_dims=diaoyong_features_train.shape[-1], device=device, output_dims=output_dims)
-model_diaoyong.fit(diaoyong_features_train, verbose=True)
-train_repr_diaoyong, test_repr_diaoyong = encode_features(model_diaoyong, diaoyong_features_train, diaoyong_features_test)
+    # daifu特征编码和评估
+    model_daifu = TS2Vec(lr=lr, depth=depth, input_dims=daifu_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
+    model_daifu.fit(daifu_features_train, verbose=True, n_epochs=epochs)
+    encode_and_evaluate(model_daifu, daifu_features_train, daifu_features_test, daifu_features_oot, labels_train, labels_test, labels_oot, "daifu")
 
-# 将编码后的特征拼接
-train_repr = np.concatenate((train_repr_daikou, train_repr_daifu, train_repr_diaoyong), axis=-1)
-test_repr = np.concatenate((test_repr_daikou, test_repr_daifu, test_repr_diaoyong), axis=-1)
-
-# 调用eval_classification进行分类评估
-y_score, eval_metrics = eval_classification(
-    train_repr, labels_train,
-    test_repr, labels_test,
-    eval_protocol='linear'  # 可以调整为'linear'、'svm'或'knn'
-)
-
-# 打印评估结果
-logger.info(f"评估指标: {eval_metrics}")
-logger.info(f"准确率 (Accuracy): {eval_metrics['acc']}")
-logger.info(f"AUPRC: {eval_metrics['auprc']}")
-logger.info(f"AUC: {eval_metrics['auc']}")
-logger.info(f"KS: {eval_metrics['ks']}")
+    # diaoyong特征编码和评估
+    model_diaoyong = TS2Vec(lr=lr, depth=depth, input_dims=diaoyong_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
+    model_diaoyong.fit(diaoyong_features_train, verbose=True, n_epochs=epochs)
+    encode_and_evaluate(model_diaoyong, diaoyong_features_train, diaoyong_features_test, diaoyong_features_oot, labels_train, labels_test, labels_oot, "diaoyong")
+except Exception as e:
+    logger.exception(str(e))
