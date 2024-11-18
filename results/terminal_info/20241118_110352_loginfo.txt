@@ -1,0 +1,33 @@
+2024-11-18 11:04:03,491 - INFO - 训练样本分布: target
+0.0    218
+1.0    218
+Name: count, dtype: int64
+2024-11-18 11:04:03,514 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,517 - INFO - 预处理后的 result_array 形状: (436, 10, 4)
+2024-11-18 11:04:03,528 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,533 - INFO - 预处理后的 result_array 形状: (720, 10, 4)
+2024-11-18 11:04:03,544 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,548 - INFO - 预处理后的 result_array 形状: (776, 10, 4)
+2024-11-18 11:04:03,576 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,591 - INFO - 预处理后的 result_array 形状: (436, 15, 17)
+2024-11-18 11:04:03,621 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,639 - INFO - 预处理后的 result_array 形状: (720, 15, 17)
+2024-11-18 11:04:03,672 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,691 - INFO - 预处理后的 result_array 形状: (776, 15, 17)
+2024-11-18 11:04:03,701 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,705 - INFO - 预处理后的 result_array 形状: (436, 5, 9)
+2024-11-18 11:04:03,712 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,718 - INFO - 预处理后的 result_array 形状: (720, 5, 9)
+2024-11-18 11:04:03,725 - INFO - 连续特征已标准化
+2024-11-18 11:04:03,731 - INFO - 预处理后的 result_array 形状: (776, 5, 9)
+2024-11-18 11:04:03,834 - INFO - 数据加载时间: 10.889138460159302秒
+2024-11-18 11:04:03,835 - INFO - 训练数据形状: (436, 10, 4)
+2024-11-18 11:04:08,350 - ERROR - too many indices for array: array is 1-dimensional, but 2 were indexed
+Traceback (most recent call last):
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 298, in <module>
+    encode_and_evaluate(model_diaoyong, diaoyong_features_train, diaoyong_features_test, diaoyong_features_oot, labels_train, labels_test, labels_oot, "diaoyong")
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 233, in encode_and_evaluate
+    y_score_train, eval_metrics_train = eval_classification(
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\tasks\classification.py", line 59, in eval_classification
+    auc = get_auc(test_labels, y_score[:, 1])  # 取类别1的概率值来计算AUC
+IndexError: too many indices for array: array is 1-dimensional, but 2 were indexed

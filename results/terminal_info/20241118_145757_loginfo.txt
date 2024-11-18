@@ -1,0 +1,33 @@
+2024-11-18 14:58:08,207 - INFO - 训练样本分布: target
+0.0    3286
+1.0    3286
+Name: count, dtype: int64
+2024-11-18 14:58:08,250 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,260 - INFO - 预处理后的 result_array 形状: (6572, 10, 4)
+2024-11-18 14:58:08,288 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,293 - INFO - 预处理后的 result_array 形状: (720, 10, 4)
+2024-11-18 14:58:08,317 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,323 - INFO - 预处理后的 result_array 形状: (776, 10, 4)
+2024-11-18 14:58:08,426 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,505 - INFO - 预处理后的 result_array 形状: (6572, 15, 17)
+2024-11-18 14:58:08,572 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,654 - INFO - 预处理后的 result_array 形状: (720, 15, 17)
+2024-11-18 14:58:08,719 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,754 - INFO - 预处理后的 result_array 形状: (776, 15, 17)
+2024-11-18 14:58:08,776 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,791 - INFO - 预处理后的 result_array 形状: (6572, 5, 9)
+2024-11-18 14:58:08,809 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,818 - INFO - 预处理后的 result_array 形状: (720, 5, 9)
+2024-11-18 14:58:08,833 - INFO - 连续特征已标准化
+2024-11-18 14:58:08,842 - INFO - 预处理后的 result_array 形状: (776, 5, 9)
+2024-11-18 14:58:08,951 - INFO - 数据加载时间: 11.69512152671814秒
+2024-11-18 14:58:08,951 - INFO - 训练数据形状: (6572, 10, 4)
+2024-11-18 14:58:10,470 - ERROR - Expected target size [128, 2], got [128]
+Traceback (most recent call last):
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 283, in <module>
+    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 170, in fit
+    loss += F.cross_entropy(outputs, y)
+  File "d:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\functional.py", line 3479, in cross_entropy
+    return torch._C._nn.cross_entropy_loss(
+RuntimeError: Expected target size [128, 2], got [128]

@@ -6,12 +6,52 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+def fit_rf(features, y, MAX_SAMPLES=100000, n_estimators=100):
+    """
+    训练一个随机森林分类器。
+    
+    参数:
+    - features: 特征数据
+    - y: 标签数据
+    - MAX_SAMPLES: 最大样本数（若数据集过大则采样）
+    - n_estimators: 随机森林中树的数量
+
+    返回:
+    - 训练好的随机森林模型
+    """
+    # 如果数据集过大，随机采样MAX_SAMPLES个样本
+    if features.shape[0] > MAX_SAMPLES:
+        split = train_test_split(
+            features, y,
+            train_size=MAX_SAMPLES, random_state=0, stratify=y
+        )
+        features = split[0]
+        y = split[2]
+    
+    # 构建随机森林模型
+    pipe = make_pipeline(
+        StandardScaler(),
+        RandomForestClassifier(
+            n_estimators=n_estimators,  # 随机森林中树的数量
+            random_state=0,             # 保证结果可重复
+            max_depth=None,             # 不限制树深度
+            min_samples_split=2,        # 节点分裂的最小样本数
+            min_samples_leaf=1,         # 叶节点的最小样本数
+            bootstrap=True,             # 使用自助法采样
+            n_jobs=-1,                  # 使用所有CPU核心加速训练
+        )
+    )
+    pipe.fit(features, y)
+    return pipe
+
 
 def fit_svm(features, y, MAX_SAMPLES=10000):
     nb_classes = np.unique(y, return_counts=True)[1].shape[0]
     train_size = features.shape[0]
 
-    svm = SVC(C=np.inf, gamma='scale')
+    svm = SVC(C=np.inf, gamma='scale', probability=True)
     if train_size // nb_classes < 5 or train_size < 50:
         return svm.fit(features, y)
     else:
@@ -26,7 +66,7 @@ def fit_svm(features, y, MAX_SAMPLES=10000):
                 'gamma': ['scale'],
                 'coef0': [0],
                 'shrinking': [True],
-                'probability': [False],
+                'probability': [True],
                 'tol': [0.001],
                 'cache_size': [200],
                 'class_weight': [None],

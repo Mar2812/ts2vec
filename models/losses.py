@@ -40,7 +40,6 @@ def instance_contrastive_loss(z1, z2):
     return loss
 
 # 时间对比损失
-# 这里并没有区分时间中重叠的部分
 def temporal_contrastive_loss(z1, z2):
     B, T = z1.size(0), z1.size(1)
     if T == 1:

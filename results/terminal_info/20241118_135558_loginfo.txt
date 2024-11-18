@@ -1,0 +1,35 @@
+2024-11-18 13:56:09,887 - INFO - 训练样本分布: target
+0.0    3286
+1.0    3286
+Name: count, dtype: int64
+2024-11-18 13:56:09,933 - INFO - 连续特征已标准化
+2024-11-18 13:56:09,943 - INFO - 预处理后的 result_array 形状: (6572, 10, 4)
+2024-11-18 13:56:09,962 - INFO - 连续特征已标准化
+2024-11-18 13:56:09,966 - INFO - 预处理后的 result_array 形状: (720, 10, 4)
+2024-11-18 13:56:09,983 - INFO - 连续特征已标准化
+2024-11-18 13:56:09,988 - INFO - 预处理后的 result_array 形状: (776, 10, 4)
+2024-11-18 13:56:10,091 - INFO - 连续特征已标准化
+2024-11-18 13:56:10,181 - INFO - 预处理后的 result_array 形状: (6572, 15, 17)
+2024-11-18 13:56:10,231 - INFO - 连续特征已标准化
+2024-11-18 13:56:10,251 - INFO - 预处理后的 result_array 形状: (720, 15, 17)
+2024-11-18 13:56:10,287 - INFO - 连续特征已标准化
+2024-11-18 13:56:10,306 - INFO - 预处理后的 result_array 形状: (776, 15, 17)
+2024-11-18 13:56:10,322 - INFO - 连续特征已标准化
+2024-11-18 13:56:10,334 - INFO - 预处理后的 result_array 形状: (6572, 5, 9)
+2024-11-18 13:56:10,345 - INFO - 连续特征已标准化
+2024-11-18 13:56:10,350 - INFO - 预处理后的 result_array 形状: (720, 5, 9)
+2024-11-18 13:56:10,361 - INFO - 连续特征已标准化
+2024-11-18 13:56:10,365 - INFO - 预处理后的 result_array 形状: (776, 5, 9)
+2024-11-18 13:56:10,630 - INFO - 数据加载时间: 12.299868106842041秒
+2024-11-18 13:56:10,631 - INFO - 训练数据形状: (6572, 10, 4)
+2024-11-18 13:56:10,672 - ERROR - 'int' object is not callable
+Traceback (most recent call last):
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 295, in <module>
+    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 110, in fit
+    train_dataset = TensorDataset(train_data, train_labels)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\utils\data\dataset.py", line 205, in __init__
+    assert all(
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\utils\data\dataset.py", line 206, in <genexpr>
+    tensors[0].size(0) == tensor.size(0) for tensor in tensors
+TypeError: 'int' object is not callable

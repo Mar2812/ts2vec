@@ -9,6 +9,7 @@ import math
 import logging  # 添加日志库
 import os
 from datetime import datetime
+from torch import nn
 
 class TS2Vec:
     '''The TS2Vec model'''
@@ -19,6 +20,7 @@ class TS2Vec:
         output_dims=320,
         hidden_dims=64,
         depth=10,
+        nums_cls=2,
         device='cuda',
         lr=0.001,
         batch_size=16,
@@ -54,6 +56,12 @@ class TS2Vec:
         self.net = torch.optim.swa_utils.AveragedModel(self._net)
         self.net.update_parameters(self._net)
         
+        self.fc = nn.Sequential(
+            nn.Linear(output_dims, hidden_dims),
+            nn.ReLU(),
+            nn.Linear(hidden_dims, nums_cls)  # num_classes为分类的类别数
+        )
+        
         self.after_iter_callback = after_iter_callback
         self.after_epoch_callback = after_epoch_callback
         
@@ -64,9 +72,13 @@ class TS2Vec:
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)  # 设置日志等级为INFO
     
+    def compute_model_params(self):
+        '''计算并记录模型的总参数量'''
+        total_params = sum(p.numel() for p in self._net.parameters() if p.requires_grad)
+        self.logger.info(f"模型的总参数量为: {total_params}")
+        return total_params
 
-
-    def fit(self, train_data, n_epochs=None, n_iters=None, verbose=False):
+    def fit(self, train_data, train_labels, n_epochs=None, n_iters=None, verbose=False):
         ''' Training the TS2Vec model.
         
         Args:
@@ -101,10 +113,13 @@ class TS2Vec:
                 
         train_data = train_data[~np.isnan(train_data).all(axis=2).all(axis=1)]
         
-        train_dataset = TensorDataset(torch.from_numpy(train_data).to(torch.float))
+        # train_dataset = TensorDataset(torch.from_numpy(train_data).to(torch.float))
+        # train_loader = DataLoader(train_dataset, batch_size=min(self.batch_size, len(train_dataset)), shuffle=True, drop_last=True)
+        train_dataset = TensorDataset(torch.from_numpy(train_data).to(torch.float), torch.from_numpy(train_labels).to(torch.long))
         train_loader = DataLoader(train_dataset, batch_size=min(self.batch_size, len(train_dataset)), shuffle=True, drop_last=True)
         
         optimizer = torch.optim.AdamW(self._net.parameters(), lr=self.lr)
+        cls_classify = torch.optim.AdamW(self.fc.parameters(), lr=self.lr)
         
         loss_log = []
         
@@ -123,6 +138,7 @@ class TS2Vec:
                         break
                     
                     x = batch[0]
+                    y = batch[1]
                     if self.max_train_length is not None and x.size(1) > self.max_train_length:
                         window_offset = np.random.randint(x.size(1) - self.max_train_length + 1)
                         x = x[:, window_offset : window_offset + self.max_train_length]
@@ -137,6 +153,7 @@ class TS2Vec:
                     crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
                     
                     optimizer.zero_grad()
+                    cls_classify.zero_grad()
                     
                     out1 = self._net(take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft))
                     out1 = out1[:, -crop_l:]
@@ -149,11 +166,14 @@ class TS2Vec:
                         out2,
                         temporal_unit=self.temporal_unit
                     )
-                    
+                    outputs = self.fc(self._net(x))  # 通过MLP进行映射
+                    outputs = self._eval_with_pooling(x=x, encoding_window='full_series').squeeze(1)
+                    loss += F.cross_entropy(outputs, y)
                     loss.backward()
                     optimizer.step()
+                    cls_classify.step()
                     self.net.update_parameters(self._net)
-                        
+                    
                     cum_loss += loss.item()
                     n_epoch_iters += 1
                     
@@ -224,7 +244,7 @@ class TS2Vec:
             
         return out.cpu()
     
-    def encode(self, data, mask=None, encoding_window=None, causal=False, sliding_length=None, sliding_padding=0, batch_size=None):
+    def encode(self, data, mask=None, encoding_window=None, causal=False, sliding_length=None, sliding_padding=0, batch_size=None, return_cls=False):
         ''' Compute representations using the model.
         
         Args:
@@ -309,10 +329,14 @@ class TS2Vec:
                             out.transpose(1, 2).contiguous(),
                             kernel_size = out.size(1),
                         ).squeeze(1)
+                        if return_cls:
+                            out = self.fc(out.to(self.device, non_blocking=True)).cpu()
                 else:
                     out = self._eval_with_pooling(x, mask, encoding_window=encoding_window)
                     if encoding_window == 'full_series':
                         out = out.squeeze(1)
+                        if return_cls:
+                            out = self.fc(out.to(self.device, non_blocking=True)).cpu()
                         
                 output.append(out)
                 
