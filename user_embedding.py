@@ -95,14 +95,14 @@ def load_data(dataset=None):
         data_minority = data[data['target'] == 1]
         data_majority = data[data['target'] == 0]
 
-        # 从少数类样本中随机选择样本，直到数量达到多数类样本的数量
-        data_minority_oversampled = resample(data_minority, 
-                                            replace=True,    # 放回采样
-                                            n_samples=len(data_majority),  # 使少数类样本数量与多数类相同
+        # 从多数类样本中随机选择与少数类样本数量相同的样本
+        data_majority_downsampled = resample(data_majority,
+                                            replace=False,    # 不放回采样
+                                            n_samples=len(data_minority)*2,
                                             random_state=42)
 
         # 合并平衡后的数据集
-        data_balanced = pd.concat([data_majority, data_minority_oversampled])
+        data_balanced = pd.concat([data_majority_downsampled, data_minority])
         return data_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
     
     # 分割数据集
@@ -261,10 +261,10 @@ def encode_and_evaluate(model, train_features, test_features, oot_features, labe
 device = 0
 # device = torch.device('cpu')
 output_dims = 320
-batch_size = 256
-lr = 0.004
+batch_size = 1024
+lr = 0.001
 depth = 5
-epochs = 4
+epochs = 30
 
 
 try:

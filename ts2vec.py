@@ -60,7 +60,7 @@ class TS2Vec:
             nn.Linear(output_dims, hidden_dims),
             nn.ReLU(),
             nn.Linear(hidden_dims, nums_cls)  # num_classes为分类的类别数
-        )
+        ).to(self.device)
         
         self.after_iter_callback = after_iter_callback
         self.after_epoch_callback = after_epoch_callback
@@ -118,8 +118,10 @@ class TS2Vec:
         train_dataset = TensorDataset(torch.from_numpy(train_data).to(torch.float), torch.from_numpy(train_labels).to(torch.long))
         train_loader = DataLoader(train_dataset, batch_size=min(self.batch_size, len(train_dataset)), shuffle=True, drop_last=True)
         
-        optimizer = torch.optim.AdamW(self._net.parameters(), lr=self.lr)
-        cls_classify = torch.optim.AdamW(self.fc.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(
+            list(self._net.parameters()) + list(self.fc.parameters()),
+            lr=self.lr
+        )
         
         loss_log = []
         
@@ -153,7 +155,6 @@ class TS2Vec:
                     crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
                     
                     optimizer.zero_grad()
-                    cls_classify.zero_grad()
                     
                     out1 = self._net(take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft))
                     out1 = out1[:, -crop_l:]
@@ -171,7 +172,6 @@ class TS2Vec:
                     loss += F.cross_entropy(outputs, y)
                     loss.backward()
                     optimizer.step()
-                    cls_classify.step()
                     self.net.update_parameters(self._net)
                     
                     cum_loss += loss.item()
