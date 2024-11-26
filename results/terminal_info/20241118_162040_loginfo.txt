@@ -1,0 +1,51 @@
+2024-11-18 16:20:50,799 - INFO - 训练样本分布: target
+0.0    436
+1.0    218
+Name: count, dtype: int64
+2024-11-18 16:20:50,819 - INFO - 连续特征已标准化
+2024-11-18 16:20:50,822 - INFO - 预处理后的 result_array 形状: (654, 10, 4)
+2024-11-18 16:20:50,841 - INFO - 连续特征已标准化
+2024-11-18 16:20:50,844 - INFO - 预处理后的 result_array 形状: (720, 10, 4)
+2024-11-18 16:20:50,860 - INFO - 连续特征已标准化
+2024-11-18 16:20:50,865 - INFO - 预处理后的 result_array 形状: (776, 10, 4)
+2024-11-18 16:20:50,895 - INFO - 连续特征已标准化
+2024-11-18 16:20:50,916 - INFO - 预处理后的 result_array 形状: (654, 15, 17)
+2024-11-18 16:20:50,982 - INFO - 连续特征已标准化
+2024-11-18 16:20:51,021 - INFO - 预处理后的 result_array 形状: (720, 15, 17)
+2024-11-18 16:20:51,080 - INFO - 连续特征已标准化
+2024-11-18 16:20:51,130 - INFO - 预处理后的 result_array 形状: (776, 15, 17)
+2024-11-18 16:20:51,150 - INFO - 连续特征已标准化
+2024-11-18 16:20:51,157 - INFO - 预处理后的 result_array 形状: (654, 5, 9)
+2024-11-18 16:20:51,173 - INFO - 连续特征已标准化
+2024-11-18 16:20:51,181 - INFO - 预处理后的 result_array 形状: (720, 5, 9)
+2024-11-18 16:20:51,193 - INFO - 连续特征已标准化
+2024-11-18 16:20:51,203 - INFO - 预处理后的 result_array 形状: (776, 5, 9)
+2024-11-18 16:20:51,386 - INFO - 数据加载时间: 11.073639631271362秒
+2024-11-18 16:20:51,386 - INFO - 训练数据形状: (654, 10, 4)
+2024-11-18 16:20:53,059 - ERROR - mat1 and mat2 shapes cannot be multiplied (6540x2 and 4x64)
+Traceback (most recent call last):
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 283, in <module>
+    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 171, in fit
+    outputs = self._eval_with_pooling(x=outputs, encoding_window='full_series').squeeze(1)
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 204, in _eval_with_pooling
+    out = self.net(x.to(self.device, non_blocking=True), mask)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\optim\swa_utils.py", line 232, in forward
+    return self.module(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\models\encoder.py", line 45, in forward
+    x = self.input_fc(x)  # B x T x Ch
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\torch\nn\modules\linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (6540x2 and 4x64)

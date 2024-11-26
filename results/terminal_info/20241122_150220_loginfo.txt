@@ -1,0 +1,45 @@
+2024-11-22 15:02:30,165 - INFO - 训练样本分布: target
+0.0    436
+1.0    218
+Name: count, dtype: int64
+2024-11-22 15:02:30,195 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,200 - INFO - 预处理后的 result_array 形状: (654, 10, 4)
+2024-11-22 15:02:30,212 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,216 - INFO - 预处理后的 result_array 形状: (720, 10, 4)
+2024-11-22 15:02:30,228 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,231 - INFO - 预处理后的 result_array 形状: (776, 10, 4)
+2024-11-22 15:02:30,261 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,277 - INFO - 预处理后的 result_array 形状: (654, 15, 17)
+2024-11-22 15:02:30,311 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,331 - INFO - 预处理后的 result_array 形状: (720, 15, 17)
+2024-11-22 15:02:30,377 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,402 - INFO - 预处理后的 result_array 形状: (776, 15, 17)
+2024-11-22 15:02:30,418 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,425 - INFO - 预处理后的 result_array 形状: (654, 5, 9)
+2024-11-22 15:02:30,438 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,443 - INFO - 预处理后的 result_array 形状: (720, 5, 9)
+2024-11-22 15:02:30,455 - INFO - 连续特征已标准化
+2024-11-22 15:02:30,459 - INFO - 预处理后的 result_array 形状: (776, 5, 9)
+2024-11-22 15:02:30,612 - INFO - 数据加载时间: 10.60657286643982秒
+2024-11-22 15:02:30,613 - INFO - 训练数据形状: (654, 10, 4)
+2024-11-22 15:02:42,092 - ERROR - Input contains NaN.
+Traceback (most recent call last):
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 284, in <module>
+    encode_and_evaluate(model_diaoyong, diaoyong_features_train, diaoyong_features_test, diaoyong_features_oot, labels_train, labels_test, labels_oot, "diaoyong")
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 231, in encode_and_evaluate
+    eval_metrics_train = eval_classification(train_score, labels_train)
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\tasks\classification.py", line 25, in eval_classification
+    auprc = average_precision_score(test_labels_onehot, score)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\sklearn\utils\_param_validation.py", line 213, in wrapper
+    return func(*args, **kwargs)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\sklearn\metrics\_ranking.py", line 268, in average_precision_score
+    return _average_binary_score(
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\sklearn\metrics\_base.py", line 80, in _average_binary_score
+    y_score = check_array(y_score)
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\sklearn\utils\validation.py", line 1064, in check_array
+    _assert_all_finite(
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\sklearn\utils\validation.py", line 123, in _assert_all_finite
+    _assert_all_finite_element_wise(
+  File "D:\Users\chao_ma02\AppData\Local\anaconda3\envs\normal\lib\site-packages\sklearn\utils\validation.py", line 172, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input contains NaN.

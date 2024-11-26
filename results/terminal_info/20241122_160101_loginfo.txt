@@ -1,0 +1,31 @@
+2024-11-22 16:01:11,679 - INFO - 训练样本分布: target
+0.0    436
+1.0    218
+Name: count, dtype: int64
+2024-11-22 16:01:11,700 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,703 - INFO - 预处理后的 result_array 形状: (654, 10, 4)
+2024-11-22 16:01:11,714 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,718 - INFO - 预处理后的 result_array 形状: (720, 10, 4)
+2024-11-22 16:01:11,729 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,733 - INFO - 预处理后的 result_array 形状: (776, 10, 4)
+2024-11-22 16:01:11,768 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,784 - INFO - 预处理后的 result_array 形状: (654, 15, 17)
+2024-11-22 16:01:11,815 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,833 - INFO - 预处理后的 result_array 形状: (720, 15, 17)
+2024-11-22 16:01:11,863 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,885 - INFO - 预处理后的 result_array 形状: (776, 15, 17)
+2024-11-22 16:01:11,905 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,910 - INFO - 预处理后的 result_array 形状: (654, 5, 9)
+2024-11-22 16:01:11,920 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,925 - INFO - 预处理后的 result_array 形状: (720, 5, 9)
+2024-11-22 16:01:11,935 - INFO - 连续特征已标准化
+2024-11-22 16:01:11,940 - INFO - 预处理后的 result_array 形状: (776, 5, 9)
+2024-11-22 16:01:12,105 - INFO - 数据加载时间: 10.730317831039429秒
+2024-11-22 16:01:12,106 - INFO - 训练数据形状: (654, 10, 4)
+2024-11-22 16:01:13,056 - ERROR - local variable 'crop_left' referenced before assignment
+Traceback (most recent call last):
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 283, in <module>
+    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+  File "c:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 105, in fit
+    crop_left, crop_right = np.random.randint(ts_l - crop_l + 1), crop_left + crop_l
+UnboundLocalError: local variable 'crop_left' referenced before assignment

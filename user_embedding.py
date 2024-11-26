@@ -87,17 +87,17 @@ def load_data(dataset=None):
     if not dataset:
         raise ValueError("未输入数据源路径")
     # 读取数据
-    data = pd.read_csv(dataset)#[:5000]
+    data = pd.read_csv(dataset)[:5000]
 
     # 平衡样本
     def balanced(data):
         # 分离标签为1和标签为0的样本
-        data_minority = data[data['target'] == 1]
         data_majority = data[data['target'] == 0]
+        data_minority = data[data['target'] == 1]
 
         # 从多数类样本中随机选择与少数类样本数量相同的样本
         data_majority_downsampled = resample(data_majority,
-                                            replace=False,    # 不放回采样
+                                            replace=True,    # 不放回采样
                                             n_samples=len(data_minority)*2,
                                             random_state=42)
 
@@ -192,7 +192,7 @@ def load_data(dataset=None):
 
 time_begin = time.time()
 data_path = r"/home/mc/ts2vec/ts2vec/datasets/wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
-# data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
+data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
 (
     diaoyong_features_train, daikou_features_train, daifu_features_train, labels_train,
     diaoyong_features_test, daikou_features_test, daifu_features_test, labels_test,
@@ -259,9 +259,9 @@ def encode_and_evaluate(model, train_features, test_features, oot_features, labe
 
 # 设置TS2Vec模型的公共参数
 device = 0
-# device = torch.device('cpu')
+device = torch.device('cpu')
 output_dims = 320
-batch_size = 1024
+batch_size = 64
 lr = 0.001
 depth = 5
 epochs = 30

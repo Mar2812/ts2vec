@@ -10,6 +10,7 @@ import logging  # 添加日志库
 import os
 from datetime import datetime
 from torch import nn
+from losses import SupConLoss
 
 class TS2Vec:
     '''The TS2Vec model'''
@@ -79,29 +80,27 @@ class TS2Vec:
         return total_params
 
     def fit(self, train_data, train_labels, n_epochs=None, n_iters=None, verbose=False):
-        ''' Training the TS2Vec model.
-        
+        ''' Training the TS2Vec model with supervised contrastive learning.
+
         Args:
-            train_data (numpy.ndarray): The training data. It should have a shape of (n_instance, n_timestamps, n_features). All missing data should be set to NaN.
-            n_epochs (Union[int, NoneType]): The number of epochs. When this reaches, the training stops.
-            n_iters (Union[int, NoneType]): The number of iterations. When this reaches, the training stops. If both n_epochs and n_iters are not specified, a default setting would be used that sets n_iters to 200 for a dataset with size <= 100000, 600 otherwise.
-            verbose (bool): Whether to print the training loss after each epoch.
-            
+            train_data (numpy.ndarray): The training data. Shape: (n_instance, n_timestamps, n_features). All missing data should be set to NaN.
+            train_labels (numpy.ndarray): Ground truth labels for supervised learning. Shape: (n_instance,).
+            n_epochs (Union[int, NoneType]): Number of epochs. Training stops after this if specified.
+            n_iters (Union[int, NoneType]): Number of iterations. Training stops after this if specified. If neither is specified, defaults are used.
+            verbose (bool): Whether to print training loss after each epoch.
+
         Returns:
-            loss_log: a list containing the training losses on each epoch.
+            loss_log: A list containing the training losses for each epoch.
         '''
         assert train_data.ndim == 3
-        
-        # 确保结果文件夹存在
+
         os.makedirs("results/loss", exist_ok=True)
-        
-        # 创建文件名，包含当前时间戳
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         loss_file_path = f"results/loss/{timestamp}_loss_result.txt"
-        
+
         if n_iters is None and n_epochs is None:
-            n_iters = 200 if train_data.size <= 100000 else 600  # default param for n_iters
-        
+            n_iters = 200 if train_data.size <= 100000 else 600
+
         if self.max_train_length is not None:
             sections = train_data.shape[1] // self.max_train_length
             if sections >= 2:
@@ -110,94 +109,92 @@ class TS2Vec:
         temporal_missing = np.isnan(train_data).all(axis=-1).any(axis=0)
         if temporal_missing[0] or temporal_missing[-1]:
             train_data = centerize_vary_length_series(train_data)
-                
+
         train_data = train_data[~np.isnan(train_data).all(axis=2).all(axis=1)]
-        
-        # train_dataset = TensorDataset(torch.from_numpy(train_data).to(torch.float))
-        # train_loader = DataLoader(train_dataset, batch_size=min(self.batch_size, len(train_dataset)), shuffle=True, drop_last=True)
+
         train_dataset = TensorDataset(torch.from_numpy(train_data).to(torch.float), torch.from_numpy(train_labels).to(torch.long))
         train_loader = DataLoader(train_dataset, batch_size=min(self.batch_size, len(train_dataset)), shuffle=True, drop_last=True)
-        
+
         optimizer = torch.optim.AdamW(
             list(self._net.parameters()) + list(self.fc.parameters()),
             lr=self.lr
         )
-        
+
         loss_log = []
-        
-        with open(loss_file_path, "w") as f:  # 打开文件进行写操作
+
+        with open(loss_file_path, "w") as f:
             while True:
                 if n_epochs is not None and self.n_epochs >= n_epochs:
                     break
-                
+
                 cum_loss = 0
                 n_epoch_iters = 0
-                
+
                 interrupted = False
                 for batch in train_loader:
                     if n_iters is not None and self.n_iters >= n_iters:
                         interrupted = True
                         break
-                    
+
                     x = batch[0]
                     y = batch[1]
                     if self.max_train_length is not None and x.size(1) > self.max_train_length:
                         window_offset = np.random.randint(x.size(1) - self.max_train_length + 1)
-                        x = x[:, window_offset : window_offset + self.max_train_length]
+                        x = x[:, window_offset: window_offset + self.max_train_length]
                     x = x.to(self.device)
-                    
+                    y = y.to(self.device)
+
+                    optimizer.zero_grad()
+
+                    # 创建两种增强方式
                     ts_l = x.size(1)
-                    crop_l = np.random.randint(low=2 ** (self.temporal_unit + 1), high=ts_l+1)
+                    crop_l = np.random.randint(low=2 ** (self.temporal_unit + 1), high=ts_l + 1)
                     crop_left = np.random.randint(ts_l - crop_l + 1)
                     crop_right = crop_left + crop_l
+
                     crop_eleft = np.random.randint(crop_left + 1)
                     crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
                     crop_offset = np.random.randint(low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0))
-                    
-                    optimizer.zero_grad()
-                    
-                    out1 = self._net(take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft))
-                    out1 = out1[:, -crop_l:]
-                    
-                    out2 = self._net(take_per_row(x, crop_offset + crop_left, crop_eright - crop_left))
-                    out2 = out2[:, :crop_l]
-                    
-                    loss = hierarchical_contrastive_loss(
-                        out1,
-                        out2,
-                        temporal_unit=self.temporal_unit
-                    )
-                    outputs = self.fc(self._net(x))  # 通过MLP进行映射
-                    outputs = self._eval_with_pooling(x=x, encoding_window='full_series').squeeze(1)
-                    loss += F.cross_entropy(outputs, y)
+
+                    # z1 和 z2 分别是两种增强方式下的特征表示
+                    z1 = self._net(take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft))
+                    z1 = z1[:, -crop_l:]
+
+                    z2 = self._net(take_per_row(x, crop_offset + crop_left, crop_eright - crop_left))
+                    z2 = z2[:, :crop_l]
+
+                    # 有监督对比学习损失
+                    z = torch.cat([z1.unsqueeze(1), z2.unsqueeze(1)], dim=1)  # [batch_size, 2, feature_dim]
+                    supervised_loss = SupConLoss(temperature=1).to(self.device)
+                    loss = supervised_loss(z, labels=y)
+
                     loss.backward()
                     optimizer.step()
                     self.net.update_parameters(self._net)
-                    
+
                     cum_loss += loss.item()
                     n_epoch_iters += 1
-                    
+
                     self.n_iters += 1
-                    
+
                     if self.after_iter_callback is not None:
                         self.after_iter_callback(self, loss.item())
-                
+
                 if interrupted:
                     break
-                
+
                 cum_loss /= n_epoch_iters
                 loss_log.append(cum_loss)
-                
-                # 写入当前epoch的损失到文件中
+
                 f.write(f"Epoch #{self.n_epochs}: loss={cum_loss}\n")
-                
+
                 if verbose:
-                    self.logger.info(f"Epoch #{self.n_epochs}: loss={cum_loss}")  # 使用logger替代print
+                    self.logger.info(f"Epoch #{self.n_epochs}: loss={cum_loss}")
                 self.n_epochs += 1
-                
+
                 if self.after_epoch_callback is not None:
                     self.after_epoch_callback(self, cum_loss)
-                
+
         return loss_log
 
     def _eval_with_pooling(self, x, mask=None, slicing=None, encoding_window=None):
