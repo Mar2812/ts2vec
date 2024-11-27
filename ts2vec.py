@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 from models import TSEncoder
-from models.losses import hierarchical_contrastive_loss
+from models.losses import supervised_hierarchical_contrastive_loss
 from utils import take_per_row, split_with_nan, centerize_vary_length_series, torch_pad_nan
 import math
 import logging  # 添加日志库
@@ -60,9 +60,10 @@ class TS2Vec:
         self.fc = nn.Sequential(
             nn.Linear(output_dims, hidden_dims),
             nn.ReLU(),
-            nn.Linear(hidden_dims, nums_cls)  # num_classes为分类的类别数
+            nn.Dropout(p=0.3),
+            nn.Linear(hidden_dims, nums_cls)
         ).to(self.device)
-        
+        self.cross_entropy_loss_fn = nn.CrossEntropyLoss().to(self.device)
         self.after_iter_callback = after_iter_callback
         self.after_epoch_callback = after_epoch_callback
         
@@ -119,9 +120,17 @@ class TS2Vec:
             list(self._net.parameters()) + list(self.fc.parameters()),
             lr=self.lr
         )
+        milestones = [3, 5, 8]
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer=optimizer,
+            milestones=milestones,
+            gamma=0.99,
+        )
 
         loss_log = []
 
+        self.fc.train()
+        
         with open(loss_file_path, "w") as f:
             while True:
                 if n_epochs is not None and self.n_epochs >= n_epochs:
@@ -162,12 +171,31 @@ class TS2Vec:
 
                     z2 = self._net(take_per_row(x, crop_offset + crop_left, crop_eright - crop_left))
                     z2 = z2[:, :crop_l]
-
+                    
+                    # z1_pool = F.max_pool1d(
+                    #     z1.transpose(1, 2),
+                    #     kernel_size = z1.size(1),
+                    # ).transpose(1, 2)
+                    # z2_pool = F.max_pool1d(
+                    #     z2.transpose(1, 2),
+                    #     kernel_size = z2.size(1),
+                    # ).transpose(1, 2)
+                    
                     # 有监督对比学习损失
-                    z = torch.cat([z1.unsqueeze(1), z2.unsqueeze(1)], dim=1)  # [batch_size, 2, feature_dim]
-                    supervised_loss = SupConLoss(temperature=1).to(self.device)
-                    loss = supervised_loss(z, labels=y)
-
+                    # z = torch.cat([z1_pool.unsqueeze(1), z2_pool.unsqueeze(1)], dim=1)  # [batch_size, 2, feature_dim]
+                    supervised_contrastive_loss = supervised_hierarchical_contrastive_loss(z1, z2, labels=y)
+                    x_pool = F.max_pool1d(
+                        self._net(x).transpose(1, 2),
+                        kernel_size = x.size(1),
+                    ).transpose(1, 2)
+                    y_score = self.fc(x_pool.squeeze(1))
+                    classification_loss = self.cross_entropy_loss_fn(y_score, y)
+                    
+                    # 综合损失（对比学习损失 + 分类损失）
+                    lambda_contrastive = 0.5
+                    lambda_classification = 0.5
+                    loss = lambda_contrastive * supervised_contrastive_loss + lambda_classification * classification_loss
+                    
                     loss.backward()
                     optimizer.step()
                     self.net.update_parameters(self._net)
@@ -180,6 +208,8 @@ class TS2Vec:
                     if self.after_iter_callback is not None:
                         self.after_iter_callback(self, loss.item())
 
+                if self.n_epochs + 1 in milestones:
+                        scheduler.step()
                 if interrupted:
                     break
 
@@ -333,6 +363,7 @@ class TS2Vec:
                     if encoding_window == 'full_series':
                         out = out.squeeze(1)
                         if return_cls:
+                            self.fc.eval()
                             out = self.fc(out.to(self.device, non_blocking=True)).cpu()
                         
                 output.append(out)

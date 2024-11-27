@@ -1,0 +1,31 @@
+2024-11-26 14:29:41,455 - INFO - 训练样本分布: target
+0.0    50488
+1.0    25244
+Name: count, dtype: int64
+2024-11-26 14:29:41,866 - INFO - 连续特征已标准化
+2024-11-26 14:29:41,954 - INFO - 预处理后的 result_array 形状: (75732, 10, 4)
+2024-11-26 14:29:42,162 - INFO - 连续特征已标准化
+2024-11-26 14:29:42,221 - INFO - 预处理后的 result_array 形状: (75336, 10, 4)
+2024-11-26 14:29:42,403 - INFO - 连续特征已标准化
+2024-11-26 14:29:42,470 - INFO - 预处理后的 result_array 形状: (79682, 10, 4)
+2024-11-26 14:29:42,962 - INFO - 连续特征已标准化
+2024-11-26 14:29:43,713 - INFO - 预处理后的 result_array 形状: (75732, 15, 17)
+2024-11-26 14:29:44,265 - INFO - 连续特征已标准化
+2024-11-26 14:29:44,953 - INFO - 预处理后的 result_array 形状: (75336, 15, 17)
+2024-11-26 14:29:45,483 - INFO - 连续特征已标准化
+2024-11-26 14:29:46,228 - INFO - 预处理后的 result_array 形状: (79682, 15, 17)
+2024-11-26 14:29:46,355 - INFO - 连续特征已标准化
+2024-11-26 14:29:46,478 - INFO - 预处理后的 result_array 形状: (75732, 5, 9)
+2024-11-26 14:29:46,574 - INFO - 连续特征已标准化
+2024-11-26 14:29:46,689 - INFO - 预处理后的 result_array 形状: (75336, 5, 9)
+2024-11-26 14:29:46,792 - INFO - 连续特征已标准化
+2024-11-26 14:29:46,937 - INFO - 预处理后的 result_array 形状: (79682, 5, 9)
+2024-11-26 14:29:47,155 - INFO - 数据加载时间: 17.773218154907227秒
+2024-11-26 14:29:47,156 - INFO - 训练数据形状: (75732, 10, 4)
+2024-11-26 14:29:48,797 - ERROR - module 'torch.optim' has no attribute 'lr_sheduler'
+Traceback (most recent call last):
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 283, in <module>
+    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 122, in fit
+    scheduler = torch.optim.lr_sheduler.ExponentialLR(optimizer, 0.9)
+AttributeError: module 'torch.optim' has no attribute 'lr_sheduler'

@@ -1,0 +1,35 @@
+2024-11-27 10:56:57,829 - INFO - 训练样本分布: target
+0.0    50488
+1.0    25244
+Name: count, dtype: int64
+2024-11-27 10:56:58,509 - INFO - 连续特征已标准化
+2024-11-27 10:56:58,578 - INFO - 预处理后的 result_array 形状: (75732, 10, 4)
+2024-11-27 10:56:58,732 - INFO - 连续特征已标准化
+2024-11-27 10:56:58,796 - INFO - 预处理后的 result_array 形状: (75336, 10, 4)
+2024-11-27 10:56:59,025 - INFO - 连续特征已标准化
+2024-11-27 10:56:59,087 - INFO - 预处理后的 result_array 形状: (79682, 10, 4)
+2024-11-27 10:56:59,613 - INFO - 连续特征已标准化
+2024-11-27 10:57:00,375 - INFO - 预处理后的 result_array 形状: (75732, 15, 17)
+2024-11-27 10:57:00,959 - INFO - 连续特征已标准化
+2024-11-27 10:57:01,622 - INFO - 预处理后的 result_array 形状: (75336, 15, 17)
+2024-11-27 10:57:02,171 - INFO - 连续特征已标准化
+2024-11-27 10:57:02,882 - INFO - 预处理后的 result_array 形状: (79682, 15, 17)
+2024-11-27 10:57:03,039 - INFO - 连续特征已标准化
+2024-11-27 10:57:03,146 - INFO - 预处理后的 result_array 形状: (75732, 5, 9)
+2024-11-27 10:57:03,227 - INFO - 连续特征已标准化
+2024-11-27 10:57:03,339 - INFO - 预处理后的 result_array 形状: (75336, 5, 9)
+2024-11-27 10:57:03,433 - INFO - 连续特征已标准化
+2024-11-27 10:57:03,549 - INFO - 预处理后的 result_array 形状: (79682, 5, 9)
+2024-11-27 10:57:03,695 - INFO - 数据加载时间: 17.215041875839233秒
+2024-11-27 10:57:03,695 - INFO - 训练数据形状: (75732, 10, 4)
+2024-11-27 10:58:41,823 - ERROR - The size of tensor a (18) must match the size of tensor b (512) at non-singleton dimension 2
+Traceback (most recent call last):
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\user_embedding.py", line 283, in <module>
+    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\ts2vec.py", line 186, in fit
+    supervised_contrastive_loss = supervised_hierarchical_contrastive_loss(z1, z2, labels=y)
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\models\losses.py", line 30, in supervised_hierarchical_contrastive_loss
+    loss += (1 - alpha) * supervised_temporal_contrastive_loss(z1, z2, mask)
+  File "C:\Users\chao_ma02\Desktop\work\ts2vec\models\losses.py", line 81, in supervised_temporal_contrastive_loss
+    exp_logits = torch.exp(logits) * logits_mask
+RuntimeError: The size of tensor a (18) must match the size of tensor b (512) at non-singleton dimension 2

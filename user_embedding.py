@@ -87,7 +87,7 @@ def load_data(dataset=None):
     if not dataset:
         raise ValueError("未输入数据源路径")
     # 读取数据
-    data = pd.read_csv(dataset)[:5000]
+    data = pd.read_csv(dataset)#[:5000]
 
     # 平衡样本
     def balanced(data):
@@ -261,10 +261,10 @@ def encode_and_evaluate(model, train_features, test_features, oot_features, labe
 device = 0
 device = torch.device('cpu')
 output_dims = 320
-batch_size = 64
-lr = 0.001
+batch_size = 256
+lr = 5e-4
 depth = 5
-epochs = 30
+epochs = 10
 
 
 try:
