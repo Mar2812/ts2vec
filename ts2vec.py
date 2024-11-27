@@ -120,11 +120,13 @@ class TS2Vec:
             list(self._net.parameters()) + list(self.fc.parameters()),
             lr=self.lr
         )
-        milestones = [3, 5, 8]
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        
+        iters_per_epoch = train_data.shape[0]//train_loader.batch_size + 1
+        T_max = iters_per_epoch * n_epochs
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer=optimizer,
-            milestones=milestones,
-            gamma=0.99,
+            T_max=T_max,
+            eta_min=1e-8
         )
 
         loss_log = []
@@ -198,6 +200,7 @@ class TS2Vec:
                     
                     loss.backward()
                     optimizer.step()
+                    scheduler.step()
                     self.net.update_parameters(self._net)
 
                     cum_loss += loss.item()
@@ -208,8 +211,6 @@ class TS2Vec:
                     if self.after_iter_callback is not None:
                         self.after_iter_callback(self, loss.item())
 
-                if self.n_epochs + 1 in milestones:
-                        scheduler.step()
                 if interrupted:
                     break
 

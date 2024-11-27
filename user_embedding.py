@@ -95,14 +95,14 @@ def load_data(dataset=None):
         data_majority = data[data['target'] == 0]
         data_minority = data[data['target'] == 1]
 
-        # 从多数类样本中随机选择与少数类样本数量相同的样本
-        data_majority_downsampled = resample(data_majority,
-                                            replace=True,    # 不放回采样
-                                            n_samples=len(data_minority)*2,
-                                            random_state=42)
+        # 从少数类样本中随机复制到与多数类样本数量相同
+        data_minority_upsampled = resample(data_minority,
+                                        replace=True,    # 放回采样
+                                        n_samples=len(data_majority),
+                                        random_state=42)
 
         # 合并平衡后的数据集
-        data_balanced = pd.concat([data_majority_downsampled, data_minority])
+        data_balanced = pd.concat([data_majority, data_minority_upsampled])
         return data_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
     
     # 分割数据集
@@ -192,7 +192,7 @@ def load_data(dataset=None):
 
 time_begin = time.time()
 data_path = r"/home/mc/ts2vec/ts2vec/datasets/wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
-data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
+# data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
 (
     diaoyong_features_train, daikou_features_train, daifu_features_train, labels_train,
     diaoyong_features_test, daikou_features_test, daifu_features_test, labels_test,
@@ -259,12 +259,12 @@ def encode_and_evaluate(model, train_features, test_features, oot_features, labe
 
 # 设置TS2Vec模型的公共参数
 device = 0
-device = torch.device('cpu')
+# device = torch.device('cpu')
 output_dims = 320
-batch_size = 256
-lr = 5e-4
+batch_size = 128
+lr = 1e-6
 depth = 5
-epochs = 10
+epochs = 200
 
 
 try:
