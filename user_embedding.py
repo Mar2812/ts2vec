@@ -89,7 +89,7 @@ def load_data(dataset=None):
     # 读取数据
     data = pd.read_csv(dataset)#[:5000]
 
-    # 平衡样本
+    # # 平衡样本
     def balanced(data):
         # 分离标签为1和标签为0的样本
         data_majority = data[data['target'] == 0]
@@ -104,6 +104,22 @@ def load_data(dataset=None):
         # 合并平衡后的数据集
         data_balanced = pd.concat([data_majority, data_minority_upsampled])
         return data_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
+    
+    # 欠采样函数
+    # def balanced(data):
+    #     # 分离标签为1和标签为0的样本
+    #     data_majority = data[data['target'] == 0]
+    #     data_minority = data[data['target'] == 1]
+
+    #     # 从多数类样本中随机抽取少数类样本数量的样本
+    #     data_majority_downsampled = resample(data_majority,
+    #                                         replace=False,  # 不放回采样
+    #                                         n_samples=len(data_minority)*2,
+    #                                         random_state=42)
+
+    #     # 合并平衡后的数据集
+    #     data_balanced = pd.concat([data_majority_downsampled, data_minority])
+    #     return data_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
     
     # 分割数据集
     data_train = data[data['dataset'] == 'trainSet']
@@ -190,32 +206,12 @@ def load_data(dataset=None):
         diaoyong_features_oot, daikou_features_oot, daifu_features_oot, labels_oot
     )
 
-time_begin = time.time()
-data_path = r"/home/mc/ts2vec/ts2vec/datasets/wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
-# data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
-(
-    diaoyong_features_train, daikou_features_train, daifu_features_train, labels_train,
-    diaoyong_features_test, daikou_features_test, daifu_features_test, labels_test,
-    diaoyong_features_oot, daikou_features_oot, daifu_features_oot, labels_oot
-) = load_data(data_path)
-time_end = time.time()
-logger.info(f"数据加载时间: {time_end - time_begin}秒")
-logger.info(f"训练数据形状: {diaoyong_features_train.shape}")
-
 # 使用TS2Vec模型对daikou, daifu, diaoyong特征分别进行编码
 def encode_features(model, train_features, test_features, oot_features, encoding_window='full_series', return_cls=False):
     train_repr = model.encode(train_features,  encoding_window=encoding_window, return_cls=return_cls)
     test_repr = model.encode(test_features, encoding_window=encoding_window, return_cls=return_cls)
     oot_repr = model.encode(oot_features, encoding_window=encoding_window, return_cls=return_cls)
     return train_repr, test_repr, oot_repr
-
-# 获取当前时间，用于生成结果文件名
-result_filename = datetime.now().strftime("%Y%m%d_%H%M%S") + "_metric.txt"
-result_filename = f"results/metric/{result_filename}"
-directory = os.path.dirname(result_filename)
-# 如果目录不存在，则创建目录
-if not os.path.exists(directory):
-    os.makedirs(directory)
 
 def save_results_to_file(content, filename):
     """将内容写入指定文件"""
@@ -225,7 +221,7 @@ def save_results_to_file(content, filename):
 # 使用TS2Vec模型对daikou, daifu, diaoyong特征分别进行编码并进行独立测试
 def encode_and_evaluate(model, train_features, test_features, oot_features, labels_train, labels_test, labels_oot, feature_name):
     # 对训练集、测试集和OOT集进行编码
-    train_score, test_score, oot_score = encode_features(model, train_features, test_features, oot_features, return_cls=True)
+    train_score, test_score, oot_score = encode_features(model, train_features, test_features, oot_features, return_cls=False)
 
     # 在训练集上评估
     eval_metrics_train = eval_classification(train_score, labels_train)
@@ -257,30 +253,52 @@ def encode_and_evaluate(model, train_features, test_features, oot_features, labe
     logger.info(result_text)
     save_results_to_file(result_text, result_filename)
 
-# 设置TS2Vec模型的公共参数
-device = 0
-# device = torch.device('cpu')
-output_dims = 320
-batch_size = 128
-lr = 1e-6
-depth = 5
-epochs = 200
+if __name__ == "__main__":
+    
+    time_begin = time.time()
+    data_path = r"/home/mc/datasets/wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
+    data_path = r"C:\Users\chao_ma02\Desktop\work\ts2vec\datasets\wfplus_application_1718475236931_781952_timefeattopresult_spark_tfmid.csv"
+    (
+        diaoyong_features_train, daikou_features_train, daifu_features_train, labels_train,
+        diaoyong_features_test, daikou_features_test, daifu_features_test, labels_test,
+        diaoyong_features_oot, daikou_features_oot, daifu_features_oot, labels_oot
+    ) = load_data(data_path)
+    time_end = time.time()
+    logger.info(f"数据加载时间: {time_end - time_begin}秒")
+    logger.info(f"训练数据形状: {diaoyong_features_train.shape}")
+    
+    # 获取当前时间，用于生成结果文件名
+    result_filename = datetime.now().strftime("%Y%m%d_%H%M%S") + "_metric.txt"
+    result_filename = f"results/metric/{result_filename}"
+    directory = os.path.dirname(result_filename)
+    # 如果目录不存在，则创建目录
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        
+    # 设置TS2Vec模型的公共参数
+    device = 0
+    device = torch.device('cpu')
+    output_dims = 320
+    batch_size = 512
+    lr = 2e-5
+    depth = 8
+    epochs = 8
 
 
-try:
-    # # daikou特征编码和评估
-    # model_daikou = TS2Vec(lr=lr, depth=depth, input_dims=daikou_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
-    # model_daikou.fit(daikou_features_train, verbose=True, n_epochs=epochs)
-    # encode_and_evaluate(model_daikou, daikou_features_train, daikou_features_test, daikou_features_oot, labels_train, labels_test, labels_oot, "daikou")
+    try:
+        # # daikou特征编码和评估
+        # model_daikou = TS2Vec(lr=lr, depth=depth, input_dims=daikou_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
+        # model_daikou.fit(daikou_features_train, verbose=True, n_epochs=epochs)
+        # encode_and_evaluate(model_daikou, daikou_features_train, daikou_features_test, daikou_features_oot, labels_train, labels_test, labels_oot, "daikou")
 
-    # # daifu特征编码和评估
-    # model_daifu = TS2Vec(lr=lr, depth=depth, input_dims=daifu_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
-    # model_daifu.fit(daifu_features_train, verbose=True, n_epochs=epochs)
-    # encode_and_evaluate(model_daifu, daifu_features_train, daifu_features_test, daifu_features_oot, labels_train, labels_test, labels_oot, "daifu")
+        # # daifu特征编码和评估
+        # model_daifu = TS2Vec(lr=lr, depth=depth, input_dims=daifu_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
+        # model_daifu.fit(daifu_features_train, verbose=True, n_epochs=epochs)
+        # encode_and_evaluate(model_daifu, daifu_features_train, daifu_features_test, daifu_features_oot, labels_train, labels_test, labels_oot, "daifu")
 
-    # diaoyong特征编码和评估
-    model_diaoyong = TS2Vec(lr=lr, depth=depth, input_dims=diaoyong_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
-    model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
-    encode_and_evaluate(model_diaoyong, diaoyong_features_train, diaoyong_features_test, diaoyong_features_oot, labels_train, labels_test, labels_oot, "diaoyong")
-except Exception as e:
-    logger.exception(str(e))
+        # diaoyong特征编码和评估
+        model_diaoyong = TS2Vec(lr=lr, depth=depth, input_dims=diaoyong_features_train.shape[-1], device=device, output_dims=output_dims, batch_size=batch_size)
+        model_diaoyong.fit(diaoyong_features_train, train_labels=labels_train, verbose=True, n_epochs=epochs)
+        encode_and_evaluate(model_diaoyong, diaoyong_features_train, diaoyong_features_test, diaoyong_features_oot, labels_train, labels_test, labels_oot, "diaoyong")
+    except Exception as e:
+        logger.exception(str(e))

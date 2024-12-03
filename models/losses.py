@@ -71,7 +71,7 @@ def temporal_contrastive_loss(z1, z2):
     sim = torch.matmul(z, z.transpose(1, 2))  # B x 2T x 2T
     logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # B x 2T x (2T-1)
     logits += torch.triu(sim, diagonal=1)[:, :, 1:]
-    logits = -F.log_softmax(logits, dim=-1)
+    logits = F.log_softmax(logits, dim=-1)
     
     t = torch.arange(T, device=z1.device)
     loss = (logits[:, t, T + t - 1].mean() + logits[:, T + t, t].mean()) / 2

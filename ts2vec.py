@@ -60,7 +60,7 @@ class TS2Vec:
         self.fc = nn.Sequential(
             nn.Linear(output_dims, hidden_dims),
             nn.ReLU(),
-            nn.Dropout(p=0.3),
+            nn.Dropout(p=0.5),
             nn.Linear(hidden_dims, nums_cls)
         ).to(self.device)
         self.cross_entropy_loss_fn = nn.CrossEntropyLoss().to(self.device)
@@ -126,12 +126,13 @@ class TS2Vec:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer=optimizer,
             T_max=T_max,
-            eta_min=1e-8
+            eta_min=1e-7
         )
 
         loss_log = []
 
         self.fc.train()
+        self._net.train()
         
         with open(loss_file_path, "w") as f:
             while True:
@@ -174,14 +175,17 @@ class TS2Vec:
                     z2 = self._net(take_per_row(x, crop_offset + crop_left, crop_eright - crop_left))
                     z2 = z2[:, :crop_l]
                     
-                    # z1_pool = F.max_pool1d(
-                    #     z1.transpose(1, 2),
-                    #     kernel_size = z1.size(1),
-                    # ).transpose(1, 2)
-                    # z2_pool = F.max_pool1d(
-                    #     z2.transpose(1, 2),
-                    #     kernel_size = z2.size(1),
-                    # ).transpose(1, 2)
+                    z1_pool = F.max_pool1d(
+                        z1.transpose(1, 2),
+                        kernel_size = z1.size(1),
+                    ).transpose(1, 2)
+                    y1_score = self.fc(z1_pool.squeeze(1))
+                    
+                    z2_pool = F.max_pool1d(
+                        z2.transpose(1, 2),
+                        kernel_size = z2.size(1),
+                    ).transpose(1, 2)
+                    y2_score = self.fc(z2_pool.squeeze(1))
                     
                     # 有监督对比学习损失
                     # z = torch.cat([z1_pool.unsqueeze(1), z2_pool.unsqueeze(1)], dim=1)  # [batch_size, 2, feature_dim]
@@ -190,12 +194,14 @@ class TS2Vec:
                         self._net(x).transpose(1, 2),
                         kernel_size = x.size(1),
                     ).transpose(1, 2)
-                    y_score = self.fc(x_pool.squeeze(1))
-                    classification_loss = self.cross_entropy_loss_fn(y_score, y)
-                    
+                    y_score_all = self.fc(x_pool.squeeze(1))
+                    classification_loss_all = self.cross_entropy_loss_fn(y_score_all, y)
+                    classification_loss1 = self.cross_entropy_loss_fn(y1_score, y)
+                    classification_loss2 = self.cross_entropy_loss_fn(y2_score, y)
+                    classification_loss = (classification_loss1 + classification_loss2 + classification_loss_all) / 3.0
                     # 综合损失（对比学习损失 + 分类损失）
-                    lambda_contrastive = 0.5
-                    lambda_classification = 0.5
+                    lambda_contrastive = 0.4
+                    lambda_classification = 0.6
                     loss = lambda_contrastive * supervised_contrastive_loss + lambda_classification * classification_loss
                     
                     loss.backward()
@@ -295,6 +301,7 @@ class TS2Vec:
 
         org_training = self.net.training
         self.net.eval()
+        self.fc.eval()
         
         dataset = TensorDataset(torch.from_numpy(data).to(torch.float))
         loader = DataLoader(dataset, batch_size=batch_size)
